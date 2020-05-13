@@ -2,7 +2,7 @@
 
 library(ggplot2); library(tidyr); library(reshape2); library(lmerTest); library(dplyr); library(plotrix); library(effects);library(readxl); library(texreg); library(ICC); library(sjmisc)
 
-# load data
+# load data now
 
 msu <- read.csv("msu.csv")
 c <- c(1:13,15:17)
@@ -90,6 +90,7 @@ msu_r <- msu_r %>%
          Est.cm = mean(Estradiol, na.rm = TRUE),
          meanPitch.cm = mean(meanPitch, na.rm = TRUE),
          minPitch.cm = mean(minPitch, na.rm = TRUE),
+         attr.cm = mean(attr, na.rm = TRUE),
          EP_log.cwc = EP_log-EP_log.cm,
          Prog_log.cwc = Prog_log-Prog_log.cm,
          Est_log.cwc = Est_log-Est_log.cm,
@@ -118,6 +119,9 @@ got <- got %>%
   mutate(EP.rank = (order(EP)))
 
 plot(got$meanPitch, got$Prog.rank)
+
+
+################## ratings must be calculated using by group_by sub_sess, piped into non-ratings sheet, then subject-means for hormones, attr, and acoustics variables need to be piped into ratings df; subject-mean centering also should take place in non-ratings sheet for non-ratings variables, and by sub_sess for ratings, rather than subID
 
 got <- got %>%
   mutate(Est_log = log(Estradiol),
@@ -207,12 +211,13 @@ lapply(msu[v], FUN = hist)
 f = function(x, y) {round(cor(subset(x[y], Session = "a"), use = "complete.obs"), 2)}
 v = c("meanPitch_z", "jitter_z", "harmonics_z", "Progesterone", "Estradiol", "EP")
 f(msu, v)
+f(got, v)
 
-htmlreg(list(msu_p_rawEP, msu_p_gmcEP, msu_p_cwcEP, msu_p_cmcEP), 
-        single.row = T,
-        file = "msu_table.html",
-        stars = numeric(0),
-        caption = "")
+#htmlreg(list(msu_p_rawEP, msu_p_gmcEP, msu_p_cwcEP, msu_p_cmcEP), 
+#        single.row = T,
+#        file = "msu_table.html",
+#        stars = numeric(0),
+#        caption = "")
 
 var_reduction = function(m0, m1){
   library(tidyverse)
@@ -233,19 +238,68 @@ cbind(M1 = var_reduction(msu_p0, msu_p_rawEP)[,4],
   round(2)
 
 
+## Attractiveness and hormones; main analyses
+
+# gottingen; attr ~ E*P
+
+g_attr_E_P_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_E_P_null)
+
+g_attr_E_P_raw <- lmer(attr ~ Estradiol + Progesterone + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_E_P_raw)
+
+g_attr_E_P_w <- lmer(attr ~ Est.cwc + Prog.cwc + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_E_P_w)
+
+g_attr_E_P_interactions <- lmer(attr ~ Est.cwc*Prog.cwc + Est.cm*Prog.cm +
+                                  Est.cm*Prog.cwc + Est.cwc*Prog.cm + (1 | subID) + (1 | rater_ID),
+                                data = got_r); summary(g_attr_E_P_interactions)
+
+# msu; attr ~ E*P
+
+m_attr_E_P_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_E_P_null)
+
+m_attr_E_P_raw <- lmer(attr ~ Estradiol + Progesterone + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_E_P_raw)
+
+m_attr_E_P_w <- lmer(attr ~ Est.cwc + Prog.cwc + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_E_P_w)
+
+m_attr_E_P_interactions <- lmer(attr ~ Est.cwc*Prog.cwc + Est.cm*Prog.cm +
+                                  Est.cm*Prog.cwc + Est.cwc*Prog.cm + (1 | subID) + (1 | sibID) + (1 | rater_ID),
+                                data = msu_r); summary(m_attr_E_P_interactions)
+
+
+## Attractiveness and hormones; robustness using log-transformed hormone values
+
+# gottingen; attr ~ logE*P
+
+g_attr_logE_P_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_logE_P_null)
+
+g_attr_logE_P_raw <- lmer(attr ~ Est_log + Prog_log + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_logE_P_raw)
+
+g_attr_logE_P_w <- lmer(attr ~ Est_log.cwc + Prog_log.cwc + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_logE_P_w)
+
+g_attr_logE_P_interactions <- lmer(attr ~ Est_log.cwc*Prog_log.cwc + Est_log.cm*Prog_log.cm +
+                                     Est_log.cm*Prog_log.cwc + Est_log.cwc*Prog_log.cm + (1 | subID) + (1 | rater_ID),
+                                   data = got_r); summary(g_attr_logE_P_interactions)
+
+# msu; attr ~ logE*P
+
+m_attr_logE_P_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_logE_P_null)
+
+m_attr_logE_P_raw <- lmer(attr ~ Estradiol + Progesterone + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_logE_P_raw)
+
+m_attr_logE_P_w <- lmer(attr ~ Est.cwc + Prog.cwc + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_logE_P_w)
+
+m_attr_logE_P_interactions <- lmer(attr ~ Est_log.cwc*Prog_log.cwc + Est_log.cm*Prog_log.cm +
+                                     Est_log.cm*Prog_log.cwc + Est_log.cwc*Prog_log.cm + (1 | subID) + (1 | sibID) + (1 | rater_ID),
+                                   data = msu_r); summary(m_attr_logE_P_interactions)
+
+
+
+## Attractiveness and hormones; robustness using EP ratio
+
 ## gottingen; attr ~ EP
 
 g_attr_EP_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_EP_null)
 
-# Compute ICC 
-iccy=VarCorr(g_attr_EP_null)$subID[1,1]/(VarCorr(g_attr_EP_null)$subID[1,1]+attr(VarCorr(g_attr_EP_null),'sc')^2)
-iccy
-
 g_attr_EP_raw <- lmer(attr ~ EP + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_EP_raw)
-
-# Computing pseudo R-squared
-yhat2=model.matrix(m_attr_logEP_w_b)%*%fixef(m_attr_logEP_w_b)
-cor(yhat2,msu_r$attr)^2
 
 g_attr_EP_w <- lmer(attr ~ EP.cwc + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_EP_w)
 
@@ -294,55 +348,19 @@ m_attr_logEP_interactions <- lmer(attr ~ EP_log.cm*EP_log.cwc + (1 | subID) + (1
                                data = msu_r); summary(m_attr_logEP_interactions)
 
 
-# gottingen; attr ~ E*P
-
-g_attr_E_P_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_E_P_null)
-
-g_attr_E_P_raw <- lmer(attr ~ Estradiol + Progesterone + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_E_P_raw)
-
-g_attr_E_P_w <- lmer(attr ~ Est.cwc + Prog.cwc + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_E_P_w)
-
-g_attr_E_P_interactions <- lmer(attr ~ Est.cwc*Prog.cwc + Est.cm*Prog.cm +
-                                 Est.cm*Prog.cwc + Est.cwc*Prog.cm + (1 | subID) + (1 | rater_ID),
-                               data = got_r); summary(g_attr_E_P_interactions)
-
-# gottingen; attr ~ logE*P
-
-g_attr_logE_P_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_logE_P_null)
-
-g_attr_logE_P_raw <- lmer(attr ~ Est_log + Prog_log + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_logE_P_raw)
-
-g_attr_logE_P_w <- lmer(attr ~ Est_log.cwc + Prog_log.cwc + (1 | subID) + (1 | rater_ID), data = got_r); summary(g_attr_logE_P_w)
-
-g_attr_logE_P_interactions <- lmer(attr ~ Est_log.cwc*Prog_log.cwc + Est_log.cm*Prog_log.cm +
-                                    Est_log.cm*Prog_log.cwc + Est_log.cwc*Prog_log.cm + (1 | subID) + (1 | rater_ID),
-                                  data = got_r); summary(g_attr_logE_P_interactions)
-
-# msu; attr ~ E*P
-
-m_attr_E_P_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_E_P_null)
-
-m_attr_E_P_raw <- lmer(attr ~ Estradiol + Progesterone + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_E_P_raw)
-
-m_attr_E_P_w <- lmer(attr ~ Est.cwc + Prog.cwc + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_E_P_w)
-
-m_attr_E_P_interactions <- lmer(attr ~ Est.cwc*Prog.cwc + Est.cm*Prog.cm +
-                                 Est.cm*Prog.cwc + Est.cwc*Prog.cm + (1 | subID) + (1 | sibID) + (1 | rater_ID),
-                               data = msu_r); summary(m_attr_E_P_interactions)
-
-# msu; attr ~ logE*P
-
-m_attr_logE_P_null <- lmer(attr ~ 1 + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_logE_P_null)
-
-m_attr_logE_P_raw <- lmer(attr ~ Estradiol + Progesterone + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_logE_P_raw)
-
-m_attr_logE_P_w <- lmer(attr ~ Est.cwc + Prog.cwc + (1 | subID) + (1 | rater_ID), data = msu_r); summary(m_attr_logE_P_w)
-
-m_attr_logE_P_interactions <- lmer(attr ~ Est_log.cwc*Prog_log.cwc + Est_log.cm*Prog_log.cm +
-                                     Est_log.cm*Prog_log.cwc + Est_log.cwc*Prog_log.cm + (1 | subID) + (1 | sibID) + (1 | rater_ID),
-                                  data = msu_r); summary(m_attr_logE_P_interactions)
 
 
+# gottingen; meanPitch; un-transformed E and P
+
+g_f0_EP_null <- lmer(scale(meanPitch) ~ 1 + (1 | subID), data = got); summary(g_f0_EP_null)
+
+g_f0_EP_raw <- lmer(scale(meanPitch) ~ Estradiol + Progesterone (1 | subID), data = got); summary(g_f0_EP_raw)
+
+g_f0_EP_w <- lmer(scale(meanPitch) ~ Est.cwc + Prog.cwc (1 | subID), data = got); summary(g_f0_EP_w)
+
+g_f0_EP_w_b <- lmer(scale(meanPitch) ~ EST.cm + Prog.m + (1 | subID), data = got); summary(g_f0_EP_w_b)
+
+g_f0_EP_interactions <- lmer(scale(meanPitch) ~ Est.cm*Prog.cwc + Est.cwc*Prog.cm + Est.cm*Prog.cm + Est.cwc*Prog.cwc + (1 | subID), data = got); summary(g_f0_EP_interactions)
 
 # gottingen; meanPitch; un-transformed E-to-P ratio
 
@@ -430,7 +448,7 @@ m_attr_f0_w_b <- lmer(scale(attr) ~ scale(meanPitch.cm) + scale(meanPitch.cwc) +
 m_attr_f0_interactions <- lmer(scale(attr) ~ scale(meanPitch.cm)*scale(meanPitch.cwc) + (1 | subID) + (1 | rater_ID),
                                data = msu_r); summary(m_attr_f0_interactions)
 
-
+ggplot(msu_r,aes(scale(meanPitch.cm), scale(attr))) + geom_point()
 
 
 
