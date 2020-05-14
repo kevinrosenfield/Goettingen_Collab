@@ -68,12 +68,18 @@ msu <- msu %>%
          EP.cm = mean(EP, na.rm = TRUE),
          Prog.cm = mean(Progesterone, na.rm = TRUE),
          Est.cm = mean(Estradiol, na.rm = TRUE),
+         attr.cm = mean(attr.sm),
+         st_attr.cm = mean(st_attr.sm),
+         lt_attr.cm = mean(lt_attr.sm),
          EP_log.cwc = EP_log-EP_log.cm,
          Prog_log.cwc = Prog_log-Prog_log.cm,
          Est_log.cwc = Est_log-Est_log.cm,
          EP.cwc = EP-EP.cm,
          Prog.cwc = Progesterone-Prog.cm,
-         Est.cwc = Estradiol-Est.cm) %>%
+         Est.cwc = Estradiol-Est.cm,
+         attr.mean.cws = attr.sm-attr.cm,
+         st_attr.mean.cws = st_attr.sm-st_attr.cm,
+         lt_attr.mean.cws = lt_attr.sm-lt_attr.cm) %>%
   ungroup %>%
   mutate(EP_log.cmc = EP_log.cm-mean(EP_log.cm, na.rm = TRUE),
          Prog_log.cmc = Prog_log.cm-mean(Prog_log.cm, na.rm = TRUE),
