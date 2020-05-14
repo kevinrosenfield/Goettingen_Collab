@@ -1,6 +1,6 @@
 # load packages
 
-library(ggplot2); library(tidyr); library(reshape2); library(lmerTest); library(dplyr); library(plotrix); library(effects);library(readxl); library(texreg); library(ICC); library(sjmisc)
+library(ggplot2); library(tidyr); library(reshape2); library(lmerTest); library(tidyverse); library(plotrix); library(effects);library(readxl); library(texreg); library(ICC); library(sjmisc); library(plyr)
 
 # load data now
 
@@ -36,6 +36,18 @@ got <- f1(got)
 
 
 ## transformations
+msu_r <- msu_r %>%
+  group_by(sub_sess) %>%
+  mutate(attr.sm = mean(attr, na.rm = TRUE),
+         st_attr.sm = mean(st_attr, na.rm = TRUE),
+         lt_attr.sm = mean(lt_attr, na.rm = TRUE))
+
+msu$sub_sess <- as.character(msu$sub_sess)
+msu_r$sub_sess <- as.character(msu_r$sub_sess)
+
+test <- join(msu, msu_r[, c("sub_sess", "attr.sm", "st_attr.sm", "lt_attr.sm")], by="sub_sess", type="left", match="first")
+
+######now do transformations in msu and pipe it all into msu_r
 
 msu <- msu %>%
   mutate(Est_log = log(Estradiol),
@@ -90,7 +102,6 @@ msu_r <- msu_r %>%
          Est.cm = mean(Estradiol, na.rm = TRUE),
          meanPitch.cm = mean(meanPitch, na.rm = TRUE),
          minPitch.cm = mean(minPitch, na.rm = TRUE),
-         attr.cm = mean(attr, na.rm = TRUE),
          EP_log.cwc = EP_log-EP_log.cm,
          Prog_log.cwc = Prog_log-Prog_log.cm,
          Est_log.cwc = Est_log-Est_log.cm,
@@ -185,6 +196,9 @@ got_r <- got_r %>%
          Est.cwc = Estradiol-Est.cm,
          meanPitch.cwc = meanPitch-meanPitch.cm,
          minPitch.cwc = minPitch-minPitch.cm) %>%
+  ungroup %>%
+  group_by(sub_sess) %>%
+  mutate(attr.cm = mean(attr, na.rm = TRUE)) %>%
   ungroup %>%
   mutate(EP_log.cmc = EP_log.cm-mean(EP_log.cm, na.rm = TRUE),
          Prog_log.cmc = Prog_log.cm-mean(Prog_log.cm, na.rm = TRUE),
